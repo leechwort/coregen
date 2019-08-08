@@ -1,9 +1,9 @@
 #include "testfuncs.h"
 #define TEST_DEBUG
-#define WINDOW_SIZE 1024
+#define WT_SIZE 1024
 
-extern float wavetable[WINDOW_SIZE];
-float output_buffer[WINDOW_SIZE];
+extern float wavetable[WT_SIZE];
+float output_buffer[WT_SIZE];
 
 void test_setup(void) {
 	/* Nothing */
@@ -27,12 +27,12 @@ void limit_harmonics(float input_wavetable[], float cutoff_frequency) {
 MU_TEST(sine_wave_fftr_check) {
   tdsp_rfft_cfg config;
   limit_harmonics(wavetable, 200.0f);
-  tdsp_rfft_init(&config, WINDOW_SIZE, true);
+  tdsp_rfft_init(&config, WT_SIZE, true);
   tdsp_rfft_perform(&config, wavetable, output_buffer);
   tdsp_rfft_cleanup(&config);
 #ifdef TEST_DEBUG
   printf("\r\n");
-	for (int i = 0; i < WINDOW_SIZE; i++) {
+	for (int i = 0; i < WT_SIZE; i++) {
 		printf("%f,\r\n", output_buffer[i]);
 		//printf("%f\r\n", wavetable[i]);
 

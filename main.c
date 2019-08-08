@@ -3,44 +3,44 @@
 #include <stdint.h>
 #include <math.h>
 
-#define N 44100
+#define Fs 44100
 
-
-
-#define WINDOW_SIZE 1024
-extern float wavetable_freqs[WINDOW_SIZE];
-float wavetable_amps[WINDOW_SIZE];
-
-int main()
+#define WT_SIZE 1024
+//extern float wavetable_freqs[WT_SIZE];
+float wavetable_amps[WT_SIZE];
+void generate_audio(coregen_cfg_t *cfg)
 {
-	float target_freq = 440.0f;
-	float limiting_freq = 800.0f;
+	// Create audio buffer
+	int16_t buf[Fs] = { 0 }; // buffer
+	int n;                   // buffer index
+
+	// Generate 1 second of audio data
+	for (n = 0; n < Fs; ++n)
+		buf[n] = 16383.0 * get_next_sample(cfg);
+
+	// Pipe the audio data to ffmpeg, which writes it to a wav file
+	FILE *pipeout;
+	pipeout = popen("ffmpeg -y -f s16le -ar 44100 -ac 1 -i - beep.wav", "w");
+	fwrite(buf, 2, Fs, pipeout);
+	pclose(pipeout);
+}
+int main() {
+	int result;
 	coregen_cfg_t config;
-	coregen_init(&config, N, WINDOW_SIZE);
-	//limit_harmonics(&config, wavetable_freqs, 800.0f / config.base_frequency);
-	generage_wt(&config, wavetable_freqs, wavetable_amps);
-	//display_wt_timedomain(&config, wavetable_amps);
-	display_wt_freqdomain(&config, wavetable_freqs);
-	/*for (int i = 0; i < 10; i++)
-	{
+	coregen_init(&config, Fs, WT_SIZE);
+	result = load_wt_from_file(&config,
+			"/home/artsin/Dev/coregen/waves/sawtooth_512.cgw");
+	CG_DEBUG("LOAD RESULT: %d\r\n", result);
+	set_target_freq(&config, 2000.0f);
+	//display_wt_timedomain(&config);
+	//display_wt_freqdomain(&config);
+
+	/* Example generation */
+	/*for (int i = 0; i < 10; i++) {
 		printf("-------------------\r\n");
 		printf("Sample: %d\r\n", i);
-		get_next_sample(&config, wavetable_amps, 440.0f);
+		get_next_sample(&config);
 	}*/
-
-    // Create audio buffer
-    int16_t buf[N] = {0}; // buffer
-    int n;                // buffer index
-    double Fs = 44100.0;  // sampling frequency
-
-    // Generate 1 second of audio data - it's just a 1 kHz sine wave
-    for (n=0 ; n<N ; ++n) buf[n] = 16383.0 * get_next_sample(&config, wavetable_amps, target_freq);
-
-    // Pipe the audio data to ffmpeg, which writes it to a wav file
-    FILE *pipeout;
-    pipeout = popen("ffmpeg -y -f s16le -ar 44100 -ac 1 -i - beep.wav", "w");
-    fwrite(buf, 2, N, pipeout);
-    pclose(pipeout);
-
+	generate_audio(&config);
 	return 0;
 }
