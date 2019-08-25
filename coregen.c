@@ -157,5 +157,6 @@ void coregen_init(coregen_cfg_t *cfg, int fs, int ws)
 {
 	cfg->fs = fs;
 	cfg->window_size = ws;
+	cfg->base_frequency = 1.0 * fs / ws;
 	cfg->base_frequency = fs / ws;
 }
