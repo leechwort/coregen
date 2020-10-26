@@ -1,7 +1,7 @@
 #ifndef __COREGEN_H
 #define __COREGEN_H
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
 #define CG_DEBUG(fmt, args...)    printf(fmt, ## args)
@@ -35,6 +35,7 @@ void coregen_init(coregen_cfg_t *cfg, int fs, int ws);
 int load_wt_from_file(coregen_cfg_t *cfg, const char *filename);
 int set_target_freq(coregen_cfg_t *cfg, float target_frequency);
 int generage_wt(coregen_cfg_t *cfg);
+int regenerate_wavetable(coregen_cfg_t *cfg, int cutoff_harmonic);
 float get_next_sample(coregen_cfg_t *cfg);
 /* Misc functions */
 void display_wt_timedomain(coregen_cfg_t *cfg);

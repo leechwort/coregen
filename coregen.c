@@ -11,9 +11,10 @@ int load_wt_from_file(coregen_cfg_t *cfg, const char *filename) {
 
 	fscanf(file, "%d\n", &wavetable_size);
 	cfg->window_size = wavetable_size;
-	if (wavetable_size == 0)
+	//CG_DEBUG("Read size is: %d\r\n", cfg->window_size);
+	if (wavetable_size == 0) {
 		return CG_WTLENGTH_ERROR;
-
+	}
 	cfg->wt_f_data = malloc(sizeof(*cfg->wt_f_data) * wavetable_size);
 	if (!cfg->wt_f_data)
 		return CG_MEMORY_ERROR;
@@ -28,7 +29,8 @@ int load_wt_from_file(coregen_cfg_t *cfg, const char *filename) {
 		free(cfg->wt_t_data);
 		return CG_MEMORY_ERROR;
 	}
-	while (fscanf(file, "%f\n", &cfg->wt_f_data_raw[index]) != EOF) {
+	while (fscanf(file, "%f *\n", &cfg->wt_t_data[index]) != EOF) {
+		//CG_DEBUG("%d: %f\n", index, cfg->wt_f_data_raw[index]);
 		//CG_DEBUG("%d: %f\n", index, cfg->wt_f_data_raw[index]);
 		index++;
 		if (index > cfg->window_size) {
@@ -37,6 +39,18 @@ int load_wt_from_file(coregen_cfg_t *cfg, const char *filename) {
 		}
 	}
 	fclose(file);
+	// Convert time-domain data to frequency domain
+	tdsp_rfft_cfg config;
+	tdsp_result res;
+	res = tdsp_rfft_init(&config, cfg->window_size, false);
+	if (res != TDSP_OK)
+		return CG_IFFT_FAIL;
+	res = tdsp_rfft_perform(&config, cfg->wt_t_data, cfg->wt_f_data_raw);
+	tdsp_rfft_cleanup(&config);
+	if (res != TDSP_OK)
+		return CG_IFFT_FAIL;
+
+	memset(cfg->wt_t_data, 0, cfg->window_size * sizeof *cfg->wt_t_data);
 	return result;
 }
 
@@ -62,6 +76,37 @@ int generage_wt(coregen_cfg_t *cfg) {
 	return CG_OK;
 }
 
+int generate_freq_domain() {
+	tdsp_rfft_cfg config;
+	tdsp_result res;
+	//res = tdsp_rfft_init(&config, sizeof(input_data)/sizeof(input_data[0]), false);
+	if (res != TDSP_OK)
+		return CG_IFFT_FAIL;
+	//res = tdsp_rfft_perform(&config, input_data, output_data);
+	tdsp_rfft_cleanup(&config);
+	if (res != TDSP_OK)
+		return CG_IFFT_FAIL;
+	return CG_OK;
+}
+// cutoff_harmoni - 0 - no limit
+int regenerate_wavetable(coregen_cfg_t *cfg, int cutoff_harmonic) {
+	tdsp_rfft_cfg config;
+	tdsp_result res;
+	res = tdsp_rfft_init(&config, cfg->window_size, true);
+	if (res != TDSP_OK)
+		return CG_IFFT_FAIL;
+
+	// Copy and limit harmonics
+	memset(cfg->wt_f_data, 0, cfg->window_size * sizeof *cfg->wt_f_data);
+	memcpy(cfg->wt_f_data, cfg->wt_f_data_raw, (cfg->window_size - cutoff_harmonic) * sizeof *cfg->wt_f_data);
+
+	res = tdsp_rfft_perform(&config, cfg->wt_f_data, cfg->wt_t_data);
+	tdsp_rfft_cleanup(&config);
+	if (res != TDSP_OK)
+		return CG_IFFT_FAIL;
+	return CG_OK;
+}
+
 /* Cut all harminics with frequency higher then limiting frequency
  * Notice, that limit is related to the base sample base frequency, if you sweep
  * sample faster, all frequencies are multiplied to sweep speed factor!
@@ -78,18 +123,19 @@ int limit_harmonics(coregen_cfg_t *cfg, float limiting_freq) {
 	 * we've got such formula of limiting index, we should zero all values
 	 * with index higher then this
 	 */
-	limiting_index = (cfg->fs / cfg->target_frequency) - 3;
-	CG_DEBUG("Harmonics limited to: %f\r\n", limiting_freq);
-	CG_DEBUG("Target freq is: %f\r\n", cfg->target_frequency);
-	CG_DEBUG("Actual limiting freq: %f\r\n",
-			limiting_freq / (cfg->target_frequency / cfg->base_frequency));
+	limiting_index = (cfg->fs / (cfg->target_frequency)) + 3;
+	//CG_DEBUG("Harmonics limited to: %f\r\n", limiting_freq);
+	//CG_DEBUG("Target freq is: %f\r\n", cfg->target_frequency);
+	//CG_DEBUG("Actual limiting freq: %f\r\n",
+	//		limiting_freq / (cfg->target_frequency / cfg->base_frequency));
+
 	/* Update working wavetable with raw values stored in wt_f_data_raw  */
 	if (!memcpy(cfg->wt_f_data, cfg->wt_f_data_raw,
 			sizeof(cfg->wt_f_data[0]) * cfg->window_size))
 		return CG_MEMORY_ERROR;
-	for (; limiting_index < cfg->window_size; limiting_index++) {
-		cfg->wt_f_data[limiting_index] = 0;
-	}
+	//for (; limiting_index < cfg->window_size; limiting_index++) {
+	//	cfg->wt_f_data[limiting_index] = 0;
+	//}
 	return CG_OK;
 }
 
@@ -98,11 +144,12 @@ int set_target_freq(coregen_cfg_t *cfg, float target_frequency) {
 			cfg->target_frequency
 					- target_frequency) > SWITCH_WAVETABLE_DIFFERENCE) {
 		/*TODO change limiting frequency calculation */
-		CG_DEBUG("Freq changed!");
 		/* Frequency of higher harmonics should be not higher then fs/2 */
 		cfg->target_frequency = target_frequency;
-		limit_harmonics(cfg, cfg->fs / 2);
-		generage_wt(cfg);
+		//limit_harmonics(cfg, cfg->fs / 2);
+		//limit_harmonics(cfg, 21877.0);
+		//limit_harmonics(cfg, 440000.0);
+		//generage_wt(cfg);
 	} else {
 		cfg->target_frequency = target_frequency;
 	}
@@ -126,9 +173,11 @@ float get_next_sample(coregen_cfg_t *cfg)
 	CG_DEBUG("Slope is: %f\r\n", slope);
 	CG_DEBUG("Interpolated value: %f\r\n", interpolated_value);
 	/* update phase change */
+
 	cfg->phase += phase_change;
-	if (cfg->phase > cfg->window_size)
+	if (cfg->phase > cfg->window_size) {
 		cfg->phase -= cfg->window_size;
+	}
 	return interpolated_value;
 }
 
@@ -136,7 +185,7 @@ void display_wt_timedomain(coregen_cfg_t *cfg)
 {
 	printf("\r\n");
 	for (int i = 0; i < cfg->window_size; i++) {
-		printf("%f,\r\n", cfg->wt_t_data[i]);
+		printf("%.9g,\r\n", cfg->wt_t_data[i]);
 	}
 }
 
@@ -144,8 +193,10 @@ void display_wt_freqdomain(coregen_cfg_t *cfg)
 {
 	float frequency = 0;
 	for (int i = 0; i < cfg->window_size; i++) {
+		CG_DEBUG("Index: %d\r\n", i);
 		if ((i + 1) % 2) {
-			CG_DEBUG("\t\t %f\r\n", cfg->wt_f_data[i]);
+			CG_DEBUG("%f Hz\t:%f\r\n", frequency, cfg->wt_f_data[i]);
+			//CG_DEBUG("%f Hz\t:%f\r\n", frequency, cfg->wt_f_data_raw[i]);
 			frequency += cfg->base_frequency;
 		} else {
 			CG_DEBUG("\t\t %f\r\n", cfg->wt_f_data[i]);
@@ -158,5 +209,6 @@ void coregen_init(coregen_cfg_t *cfg, int fs, int ws)
 	cfg->fs = fs;
 	cfg->window_size = ws;
 	cfg->base_frequency = 1.0 * fs / ws;
-	cfg->base_frequency = fs / ws;
+	cfg->phase = 0.0f;
+	//CG_DEBUG("CG INIT: base freq is:%f\r\n", cfg->base_frequency);
 }
