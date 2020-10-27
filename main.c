@@ -14,6 +14,7 @@ void generate_audio(coregen_cfg_t *cfg, float sample_length)
 	int16_t buf[Fs] = { 0 };// buffer
 	int n;			// buffer index
 
+	set_target_freq(cfg, 50);
 	// Generate 1 second of audio data
 	for (n = 0; n < Fs * sample_length; ++n)
 		buf[n] = 16383.0 * get_next_sample(cfg);
@@ -51,16 +52,17 @@ int main() {
 			"/home/artsin/Dev/coregen/waves/exp_sin_2048.cgw");
 
 	load_wt_from_file(&wt_two,
-				"/home/artsin/Dev/coregen/waves/sawtooth_2048.cgw");
+			"/home/artsin/Dev/coregen/waves/sawtooth_2048.cgw");
 	allocate_wt(&wt_mix, WT_SIZE);
 
-	morph_wt(&wt_one, &wt_two, &wt_mix, 0.000000000, MORPH_SUM);
+	morph_wt(&wt_one, &wt_two, &wt_mix, 0.95, MORPH_SUM);
 	//CG_DEBUG("LOAD RESULT: %d\r\n", result);
 	//regenerate_wavetable(&config, 0);
 	//set_target_freq(&config, 1500.0f);
 
 	//generate_audio_swipe(&config, 3, 50, 2000);
-	display_wt_freqdomain(&wt_mix);
-	generate_audio_swipe(&wt_mix, 0.125/2, 50, 2500/2);
+	//display_wt_freqdomain(&wt_mix);
+	generate_audio_swipe(&wt_mix, 5, 20, 10000);
+	//generate_audio(&wt_mix, 1);
 	return 0;
 }

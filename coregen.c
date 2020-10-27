@@ -194,12 +194,14 @@ float get_next_sample(coregen_cfg_t *cfg)
 	CG_DEBUG("Corresponding values in table are: %f, %f\r\n", cfg->wt_t_data[m], cfg->wt_t_data[n]);
 	CG_DEBUG("Slope is: %f\r\n", slope);
 	CG_DEBUG("Interpolated value: %f\r\n", interpolated_value);
+
 	/* update phase change */
 
 	cfg->phase += phase_change;
-	if (cfg->phase > cfg->window_size) {
-		cfg->phase -= cfg->window_size;
+	if (cfg->phase >= (cfg->window_size - 1)) {
+		cfg->phase -= (cfg->window_size - 1);
 	}
+
 	return interpolated_value;
 }
 
