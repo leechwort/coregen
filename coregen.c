@@ -41,6 +41,12 @@ int morph_wt(coregen_cfg_t *wt_one, coregen_cfg_t *wt_two,
 					* (wt_one->wt_f_data_raw[i])
 					+ (1.0f - morph_fraq) * (wt_two->wt_f_data_raw[i]);
 		}
+	} else if (morph_type == MORPH_SUB) {
+		for (int i = 0; i < wt_one->window_size; i++) {
+			wt_result->wt_f_data_raw[i] = morph_fraq
+					* (wt_one->wt_f_data_raw[i])
+					- (1.0f - morph_fraq) * (wt_two->wt_f_data_raw[i]);
+		}
 	}
 	return CG_OK;
 }

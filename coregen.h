@@ -1,7 +1,7 @@
 #ifndef __COREGEN_H
 #define __COREGEN_H
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
 #define CG_DEBUG(fmt, args...)    printf(fmt, ## args)
