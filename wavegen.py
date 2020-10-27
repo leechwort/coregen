@@ -11,7 +11,8 @@ Fs = 44100
 
 # Create a wave table with 1024 slots to store the waves.
 wt = wavetable.WaveTable(1, wave_len=1024)
-m = sg.saw()
+#m = sg.saw()
+m = sg.exp_sin()
 wt.waves = [m]
 
 #visualize.plot_wavetable(wt)
@@ -27,7 +28,7 @@ freq = np.insert(freq, 0, 0)
 X = np.delete(X, -1)
 freq = np.delete(freq, -1)
 
-outfile = "./waves/sawtooth_%d.cgw" % sample_length
+outfile = "./waves/exp_sin_%d.cgw" % sample_length
 with open(outfile, 'w') as f:
     f.write(str(len(m)) + '\n')
     for i, data in enumerate(m):    
@@ -35,10 +36,10 @@ with open(outfile, 'w') as f:
         f.write(str(data) + '\n')
 
 
-def generate_wav(wavetable):
-    data = np.tile(wavetable.waves[0], 100)
-    write("source.wav", 44100, data)
-generate_wav(wt)
+#def generate_wav(wavetable):
+#    data = np.tile(wavetable.waves[0], 100)
+#    write("source.wav", 44100, data)
+#generate_wav(wt)
 # Reconstruct wavetable
 
 #rFFT_values[-80:] = 0.0
@@ -46,7 +47,7 @@ generate_wav(wt)
 reconstructed = fftpack.irfft(X)
 
 
-plt.plot(reconstructed, 'bo-')
+#plt.plot(reconstructed, 'bo-')
 plt.plot(m, 'r.-')
 
 

@@ -43,27 +43,24 @@ void generate_audio_swipe(coregen_cfg_t *cfg, float sample_length, float freq_st
 }
 int main() {
 	int result;
-	coregen_cfg_t config;
-	coregen_init(&config, Fs, WT_SIZE);
-	result = load_wt_from_file(&config,
-			"/home/artsin/Dev/coregen/waves/sawtooth_2048.cgw");
+	coregen_cfg_t wt_one, wt_two, wt_mix;
+	coregen_init(&wt_one, Fs, WT_SIZE);
+	coregen_init(&wt_two, Fs, WT_SIZE);
+	coregen_init(&wt_mix, Fs, WT_SIZE);
+	load_wt_from_file(&wt_one,
+			"/home/artsin/Dev/coregen/waves/exp_sin_2048.cgw");
 
+	load_wt_from_file(&wt_two,
+				"/home/artsin/Dev/coregen/waves/sawtooth_2048.cgw");
+	allocate_wt(&wt_mix, WT_SIZE);
+
+	morph_wt(&wt_one, &wt_two, &wt_mix, 0.000000000, MORPH_SUM);
 	//CG_DEBUG("LOAD RESULT: %d\r\n", result);
-	regenerate_wavetable(&config, 0);
+	//regenerate_wavetable(&config, 0);
+	//set_target_freq(&config, 1500.0f);
 
-	set_target_freq(&config, 1500.0f);
-	//CG_DEBUG("Base frequency: %f\r\n", config.base_frequency);
-	//CG_DEBUG("Target frequency: %f\r\n", config.target_frequency);
-
-	/* Example generation */
-	//for (int i = 0; i < 10; i++) {
-	//	printf("-------------------\r\n");
-	//	printf("Sample: %d\r\n", i);
-	//	get_next_sample(&config);
-	//}
-
-	//generate_audio(&config, 1);
 	//generate_audio_swipe(&config, 3, 50, 2000);
-	generate_audio_swipe(&config, 20, 50, 15000);
+	display_wt_freqdomain(&wt_mix);
+	generate_audio_swipe(&wt_mix, 0.125/2, 50, 2500/2);
 	return 0;
 }
